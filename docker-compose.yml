@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: shared-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  portal-api:
+    build: ./portal/server
+    container_name: portal-api
+    ports:
+      - "15000:5000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: ${PORT}
+      SESSION_SECRET: ${SESSION_SECRET}
+      SERVER_URL: ${SERVER_URL}
+      CLIENT_URL: ${CLIENT_URL}
+      FLASK_API_URL: ${FLASK_API_URL}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      FLASK_ENV: ${FLASK_ENV}
+      GOOGLE_SERVICE_ACCOUNT_FILE: ${GOOGLE_SERVICE_ACCOUNT_FILE}
+      NODE_ENV: ${NODE_ENV}
+    depends_on:
+      - postgres
+    volumes:
+      - ./portal/server:/app
+      - /home/tatiana-turin/projects/Student-Portal-Submission/credentials:/app/credentials
+  #  command: nodemon app.js <<-- verride CMD in dockerfile
+
+  portal-client:
+    build: ./portal/client
+    container_name: portal-client
+    ports:
+      - "13000:3000"
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL}
+    depends_on:
+      - lab-creator-api
+    volumes:
+      - ./portal/client:/app
+      - /app/node_modules
+    command: npm start
+
+  lab-creator-api:
+    build: ./lab-creator/server
+    container_name: lab-creator-api
+    ports:
+      - "14000:4000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      NODE_ENV: ${NODE_ENV}
+    depends_on:
+      - postgres
+    volumes:
+      - ./lab-creator/backend:/app
+   # command: npx nodemon app.js
+
+  lab-creator-client:
+    build: ./lab-creator/client
+    container_name: lab-creator-client
+    ports:
+      - "13001:3001"
+    environment:
+      REACT_APP_SERVER_HOST: ${REACT_APP_SERVER_HOST}
+      REACT_APP_CLIENT_PORTAL_HOST: ${REACT_APP_CLIENT_PORTAL_HOST}
+    depends_on:
+      - lab-creator-api
+    volumes:
+      - ./lab-creator/client:/app
+      - /app/node_modules
+    command: npm start
+
+volumes:
+  pgdata:
+
