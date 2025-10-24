@@ -1,0 +1,43 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs
+logs/
+*.log
+
+# dotenv environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+**/pgdata/
+**/postgres-data/
+**/data/
+*.pid
+
+# Build output
+dist/
+build/
+
+# VS Code settings
+.vscode/
+
+# React build
+portal/client/build/
+lab-creator/client/build/
+
+# Prisma
+**/prisma/dev.db
+**/prisma/*.sqlite
+
+# Misc
+*.swp
+*.swo
