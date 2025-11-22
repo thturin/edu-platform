@@ -3,39 +3,55 @@ networks:
     driver: bridge
 
 services:
-  postgres:
+  portal-db:
     image: postgres:16
-    container_name: shared-db
+    container_name: portal-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_PORTAL_DB}
     ports:
       - "15432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata-portal:/var/lib/postgresql/data
     networks:
       - edu-platform-network
     restart: unless-stopped
-    
 
+  lab-creator-db:
+    image: postgres:16
+    container_name: lab-creator-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_LABCREATOR_DB}
+    ports:
+      - "15433:5432"
+    volumes:
+      - pgdata-lab-creator:/var/lib/postgresql/data
+    networks:
+      - edu-platform-network
+    restart: unless-stopped
+      
   portal-api:
     build: ./portal/server
     container_name: portal-api
     ports:
       - "15000:5000"
+      - "5555:5555"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${PORTAL_DATABASE_URL}
+      LAB_CREATOR_API_URL: ${LAB_CREATOR_API_URL}
       PORT: ${PORT}
       SESSION_SECRET: ${SESSION_SECRET}
       SERVER_URL: ${SERVER_URL}
       CLIENT_URL: ${CLIENT_URL}
       NODE_ENV: ${NODE_ENV}
     depends_on:
-      - postgres
+      - portal-db
     volumes:
       - ./portal/server:/app
-      - /app/node_modules
+      - portal-api-node-modules:/app/node_modules
   #  command: nodemon app.js <<-- verride CMD in dockerfile
     networks:
       - edu-platform-network
@@ -47,7 +63,8 @@ services:
     ports:
       - "13000:3000"
     environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL}
+      REACT_APP_API_HOST: ${REACT_APP_API_HOST}
+      REACT_APP_API_LAB_HOST: ${REACT_APP_API_LAB_HOST}
       # Add WebSocket configuration to enable hotreloading
       WDS_SOCKET_PORT: 13000 #lets websocket  use main react port
       FAST_REFRESH: true
@@ -57,7 +74,7 @@ services:
       - portal-api
     volumes:
       - ./portal/client:/app
-      - /app/node_modules
+      - portal-client-node-modules:/app/node_modules
     command: npm start
     networks:
       - edu-platform-network
@@ -68,16 +85,17 @@ services:
     container_name: lab-creator-api
     ports:
       - "14000:4000"
+      - "5556:5555"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${LABCREATOR_DATABASE_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       NODE_ENV: ${NODE_ENV}
     depends_on:
-      - postgres
+      - lab-creator-db
     volumes:
       - ./lab-creator/server:/app
-      - /app/node_modules
+      - lab-creator-api-node-modules:/app/node_modules
    # command: npx nodemon app.js
     networks:
       - edu-platform-network
@@ -100,12 +118,27 @@ services:
       - lab-creator-api
     volumes:
       - ./lab-creator/client:/app
-      - /app/node_modules
+      - lab-creator-client-node-modules:/app/node_modules
     command: npm start
     networks:
       - edu-platform-network
 
 volumes:
-  pgdata:
-  #access volume from any service 
+  pgdata-portal:
+  pgdata-lab-creator:
+  portal-api-node-modules:
+  portal-client-node-modules:
+  lab-creator-api-node-modules:
+  lab-creator-client-node-modules:
 
+#originally there was an issue with not naming the node_modules volume
+#OLD
+# volumes:
+#   - ./lab-creator/server:/app        # Mount host folder to /app
+#   - /app/node_modules                # Try to preserve node_modules
+# Docker builds image → runs npm install → creates /app/node_modules inside image
+# Container starts → mounts server from host to /app in container
+# 2.Problem: Host folder overwrites everything in /app, including node_modules
+# The second line /app/node_modules creates an anonymous volume (random name like abc123)
+# But it's empty because the image's node_modules was already overwritten by step 2
+# Result: Missing packages!
