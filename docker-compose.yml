@@ -3,6 +3,16 @@ networks:
     driver: bridge
 
 services:
+  redis:
+    image: redis:7
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    ports:
+      - "16379:6379"          # expose to host if needed
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks:
+      - edu-platform-network
+    restart: unless-stopped
   portal-db:
     image: postgres:16
     container_name: portal-db
@@ -17,7 +27,6 @@ services:
     networks:
       - edu-platform-network
     restart: unless-stopped
-
   lab-creator-db:
     image: postgres:16
     container_name: lab-creator-db
@@ -47,11 +56,15 @@ services:
       SERVER_URL: ${SERVER_URL}
       CLIENT_URL: ${CLIENT_URL}
       NODE_ENV: ${NODE_ENV}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      RUN_ASSIGNMENT_WORKER: true
     depends_on:
       - portal-db
+      - redis
     volumes:
       - ./portal/server:/app
-      - portal-api-node-modules:/app/node_modules
+     # - portal-api-node-modules:/app/node_modules
   #  command: nodemon app.js <<-- verride CMD in dockerfile
     networks:
       - edu-platform-network
@@ -74,7 +87,7 @@ services:
       - portal-api
     volumes:
       - ./portal/client:/app
-      - portal-client-node-modules:/app/node_modules
+    #  - portal-client-node-modules:/app/node_modules
     command: npm start
     networks:
       - edu-platform-network
@@ -95,7 +108,7 @@ services:
       - lab-creator-db
     volumes:
       - ./lab-creator/server:/app
-      - lab-creator-api-node-modules:/app/node_modules
+    #  - lab-creator-api-node-modules:/app/node_modules
    # command: npx nodemon app.js
     networks:
       - edu-platform-network
@@ -118,7 +131,7 @@ services:
       - lab-creator-api
     volumes:
       - ./lab-creator/client:/app
-      - lab-creator-client-node-modules:/app/node_modules
+    #  - lab-creator-client-node-modules:/app/node_modules
     command: npm start
     networks:
       - edu-platform-network
@@ -126,19 +139,7 @@ services:
 volumes:
   pgdata-portal:
   pgdata-lab-creator:
-  portal-api-node-modules:
-  portal-client-node-modules:
-  lab-creator-api-node-modules:
-  lab-creator-client-node-modules:
-
-#originally there was an issue with not naming the node_modules volume
-#OLD
-# volumes:
-#   - ./lab-creator/server:/app        # Mount host folder to /app
-#   - /app/node_modules                # Try to preserve node_modules
-# Docker builds image → runs npm install → creates /app/node_modules inside image
-# Container starts → mounts server from host to /app in container
-# 2.Problem: Host folder overwrites everything in /app, including node_modules
-# The second line /app/node_modules creates an anonymous volume (random name like abc123)
-# But it's empty because the image's node_modules was already overwritten by step 2
-# Result: Missing packages!
+  # portal-api-node-modules:
+  # portal-client-node-modules:
+  # lab-creator-api-node-modules:
+  # lab-creator-client-node-modules:
