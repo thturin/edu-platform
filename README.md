@@ -12,8 +12,9 @@ Both apps now live in their own repositories. Clone them next to the Compose fil
 | Directory (inside this repo) | Upstream repo | Purpose |
 | --- | --- | --- |
 | `portal/` | Portal application repo (clone here) | CRA client, Express API, Prisma schema, BullMQ workers |
+github.com/thturin/lab-creator
 | `lab-creator/` | Lab creator repo (clone here) | React lab builder, grading API with OpenAI/DeepSeek |
-
+github.com/thturin/portal
 > Replace the placeholder repo names above with your actual Git origin (GitHub, GitLab, etc.). The Compose file assumes the portal code sits in `portal/` and the lab creator code sits in `lab-creator/` relative to the root of this repo.
 
 ## Getting started
