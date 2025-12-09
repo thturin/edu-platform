@@ -12,7 +12,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     networks:
       - edu-platform-network
-    restart: unless-stopped
+    restart: no
   portal-db:
     image: postgres:16
     container_name: portal-db
@@ -40,7 +40,7 @@ services:
       - pgdata-lab-creator:/var/lib/postgresql/data
     networks:
       - edu-platform-network
-    restart: unless-stopped
+    restart: no
       
   portal-api:
     build: ./portal/server
@@ -68,7 +68,7 @@ services:
   #  command: nodemon app.js <<-- verride CMD in dockerfile
     networks:
       - edu-platform-network
-    restart: unless-stopped
+    restart: no
 
   portal-client:
     build: ./portal/client
@@ -91,7 +91,9 @@ services:
     command: npm start
     networks:
       - edu-platform-network
-    restart: unless-stopped
+    restart: no
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   lab-creator-api:
     build: ./lab-creator/server
@@ -112,29 +114,33 @@ services:
    # command: npx nodemon app.js
     networks:
       - edu-platform-network
-    restart: unless-stopped
+    restart: no
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-  lab-creator-client:
-    build: ./lab-creator/client
-    container_name: lab-creator-client
-    ports:
-      - "13001:3001"
-    environment:
-      REACT_APP_SERVER_HOST: ${REACT_APP_SERVER_HOST}
-      REACT_APP_CLIENT_PORTAL_HOST: ${REACT_APP_CLIENT_PORTAL_HOST}
-      # Add WebSocket configuration to enable hotreloading
-      WDS_SOCKET_PORT: 13001 #lets websocket  use main react port
-      FAST_REFRESH: true
-      WATCHPACK_POLLING: true
-      CHOKIDAR_USEPOLLING: "true"
-    depends_on:
-      - lab-creator-api
-    volumes:
-      - ./lab-creator/client:/app
-    #  - lab-creator-client-node-modules:/app/node_modules
-    command: npm start
-    networks:
-      - edu-platform-network
+  # lab-creator-client:
+  #   build: ./lab-creator/client
+  #   container_name: lab-creator-client
+  #   ports:
+  #     - "13001:3001"
+  #   environment:
+  #     REACT_APP_SERVER_HOST: ${REACT_APP_SERVER_HOST}
+  #     REACT_APP_CLIENT_PORTAL_HOST: ${REACT_APP_CLIENT_PORTAL_HOST}
+  #     # Add WebSocket configuration to enable hotreloading
+  #     WDS_SOCKET_PORT: 13001 #lets websocket  use main react port
+  #     FAST_REFRESH: true
+  #     WATCHPACK_POLLING: true
+  #     CHOKIDAR_USEPOLLING: "true"
+  #   depends_on:
+  #     - lab-creator-api
+  #   volumes:
+  #     - ./lab-creator/client:/app
+  #   #  - lab-creator-client-node-modules:/app/node_modules
+  #   command: npm start
+  #   networks:
+  #     - edu-platform-network
+
+
 
 volumes:
   pgdata-portal:
