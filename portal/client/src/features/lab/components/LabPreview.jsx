@@ -1,0 +1,315 @@
+import axios from "axios";
+import { useState, useEffect, useCallback } from 'react';
+import { createSession } from '../models/session';
+import MaterialBlock from './MaterialBlock';
+import QuestionBlock from './QuestionBlock';
+import AIPrompt from './AIPrompt';
+import "../styles/Lab.css";
+
+function LabPreview({
+    blocks,
+    setBlocks,
+    title,
+    setTitle,
+    assignmentId,
+    selectedAssignmentDueDate,
+    mode = 'student',
+    userId,
+    username,
+    readOnly,
+    labId,
+    aiPrompt,
+    setAiPrompt,
+    handleAiPromptChange,
+    onUpdateSubmission,
+    showExplanations,
+    reloadKey = 0
+}) {
+
+    const isAdmin = mode === 'admin';
+
+    const [session, setSession] = useState(createSession(title, username, userId, labId));
+    const [sessionLoaded, setSessionLoaded] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+
+    //derive from session/setSession
+    const responses = session.responses || {};
+    const gradedResults = session.gradedResults;
+    const finalScore = session.finalScore || {};
+
+
+    //update handler that modifies responses in session
+    const handleResponseChange = (questionId, value) => {
+        setSession(prev => ({ //update the session and concatenate old data with new response for questionId an val
+            ...prev,
+            responses: { ...prev.responses, [questionId]: value }
+        }));
+    }
+
+    //all questions that are being scored. questions that are not being scored are ignored
+    const scoredNoSubQuestions = blocks.filter(
+        b => b.blockType === "question" && b.isScored && (!b.subQuestions || b.subQuestions.length === 0)
+    );
+
+    const scoredSubQuestions = blocks
+        .filter(b => b.blockType === "question" && b.subQuestions && b.subQuestions.length > 0)
+        .flatMap(b => b.subQuestions.filter(sq => sq.isScored));
+
+    const allQuestions = [...scoredNoSubQuestions, ...scoredSubQuestions];
+
+    //AT SOME POINT YOU NEED TO REPLACE THIS WITH THE LOADLAB.JS FUNCTION
+
+    const loadLab = useCallback(async () => {
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_LAB_HOST}/lab/load-lab`, {
+                params: { assignmentId, title }
+            });
+            setBlocks(response.data.blocks);
+            setTitle(response.data.title);
+            if (mode === 'admin') setAiPrompt(response.data.aiPrompt);
+        } catch (err) {
+            console.error('Lab did not load from labController successfully', err.message);
+        }
+    }, [assignmentId, title, mode, setBlocks, setTitle, setAiPrompt]);
+
+    const loadSession = useCallback(async () => {
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_LAB_HOST}/session/load-session/${labId}`, {
+                params: { userId, username, title }
+            });
+
+            if (response.data.session) setSession(response.data.session);
+            setSessionLoaded(true);
+            console.log('Session Loaded!');
+        } catch (err) {
+            console.error('Error in getResponse()', err);
+        }
+    }, [labId, userId, username, title]);
+
+    const saveSession = useCallback(async () => {
+        if (!session || !title || !userId || !labId || !sessionLoaded) return;
+        try {
+            await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/session/save-session`, { session });
+        } catch (err) {
+            console.error('Error saving session. Check backend', err);
+        }
+    }, [session, title, userId, labId, sessionLoaded]);
+
+    //LOAD SESSION and LAB
+        useEffect(() => {
+            if (!assignmentId) return;
+            loadLab();
+        }, [assignmentId, reloadKey, loadLab]);
+
+        useEffect(() => {
+            if (!labId || (!userId && !username)) return;
+            setSessionLoaded(false);
+            loadSession();
+        }, [labId, userId, username, reloadKey, loadSession]);
+
+    // AUTO SAVE SESSION - save 
+    useEffect(() => { //useeffect cannot be async
+        saveSession();
+        const timeoutId = setTimeout(saveSession, 1000); //add 1 second delay 
+        return () => clearTimeout(timeoutId);
+    }, [saveSession]);
+
+
+    const submitResponses = async () => {
+        setIsSubmitting(true);
+        let newGradedResults = { ...session.gradedResults };//create a new grade results to add empty
+        //LOOP THROUGH RESPONSES
+        for (const [questionId, userAnswer] of Object.entries(responses)) {
+            //questionId is a string
+            let answerKey = '';
+            let question = '';
+            let type = '';
+            //THIS ASSUMES SUB QUESTIONS DO NOT HAVE SUB QUESTIONS
+            //LOOP THROUGH BLOCKS AND ASSIGN ANSWERKEY, QUESTIOHN, TYPE
+            for (const block of blocks) { //FIND BLOCK 
+                //find a question with no sub questions
+                if (block.blockType === 'question' && block.isScored &&
+                    (!block.subQuestions || block.subQuestions.length === 0) &&
+                    block.id === questionId) {
+                    answerKey = block.key;
+                    question = block.prompt;
+                    type = block.type;
+                    break;
+                }
+
+                //find a question with subquestions
+                if (block.blockType === 'question' && block.subQuestions && block.subQuestions.length > 0) {
+                    for (const sq of block.subQuestions) {
+                        if (sq.id === questionId && sq.isScored) {
+                            answerKey = sq.key;
+                            question = sq.prompt;
+                            type = sq.type;
+            
+                            break;
+                        }
+                    }
+                }
+            }
+            // If this response does not map to a scored question (if the isScored is false) skip grading
+            if (!answerKey && !question && !type) {
+                continue;
+            }
+  
+            //DEEPSEEK API REQUEST
+            try {
+                const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
+                    userAnswer,
+                    answerKey,
+                    question,
+                    questionType: type,
+                    AIPrompt: aiPrompt
+                });
+
+
+                //UPDATED GRADEDRESULTS for session 
+                newGradedResults = {
+                    ...newGradedResults,
+                    [questionId]: { //add or update current gradedResult with questionId
+                        score: response.data.score,
+                        feedback: response.data.feedback
+                    }
+                }
+                console.log('updating graded results',newGradedResults);
+            } catch (err) {
+                console.error("Error grading in LabPreview [LabPreview.jsx]",err.message);
+            }
+        } //END OF FOR LOOP
+
+        //FOR QUESTIONS THAT WERE LEFT BLANK, CREATE A NEW OBJECT IN GRADEDRESULTS 
+        //WITH SCORE 0 AND NO RESPONSE
+        allQuestions.forEach(q => {
+            //if new gradedResults does not contain this id,
+            if (!newGradedResults[q.id] &&  q.isScored) {
+                newGradedResults[q.id] = {
+                    score: 0,
+                    feedback: "left blank"
+                }
+            }
+        });
+        //CALCULATE FINAL SCORE
+        let newFinalScorePercent;
+        //console.log(newGradedResults);
+        try {
+            const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/calculate-score`, {
+                gradedResults: newGradedResults, //use variable instead
+                labId,
+                userId
+            });
+
+            //when upserting submission, use this value for percent insteado using session because 
+            //setSession is asynchronous so doesn't always update before upserting to lab 
+            newFinalScorePercent = response.data.session.finalScore.percent;
+
+            //don
+            setSession(prev => ({
+                ...prev,
+                gradedResults: newGradedResults,
+                finalScore: response.data.session.finalScore
+            }));
+        } catch (err) {
+            console.error('error calculating final score', err);
+        } finally {
+            if (isAdmin) setIsSubmitting(false);
+        }
+        //CREATE A LAB TYPE SUBMISSION ONLY IF IT IS A STUDENT
+        if (!isAdmin) {
+            try {
+                const response = await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
+                    assignmentId,
+                    userId,
+                    dueDate: selectedAssignmentDueDate,
+                    score: newFinalScorePercent
+                });
+                //SESSION SCORE DOES NTO GET UPDATED with late penalty
+                onUpdateSubmission(response.data);
+            } catch (err) {
+                console.error('error upsertingLab ', err);
+            } finally {
+                setIsSubmitting(false); //stop loading regardless of success/failure
+            }
+        }
+
+    }
+
+    return (
+        <>
+            {/* LAB PREVIEW */}
+            <div className="ml-8">
+                <div className="mt-8 p-6 border rounded bg-gray-100">
+                    <h2 className="text-xl font-bold mb-4">Lab Preview</h2>
+                </div>
+                <div>
+                    <h3 className="font-semibold mb-2">{title}</h3>
+                </div>
+                {/* LIST BLOCKS AND DISPLAY */}
+                {blocks.map((block, i) => (
+                    <div key={block.id || i} className="mb-6">
+                        {/* bordered block wrapper */}
+                        <div className="rounded-lg border-2 border-slate-900 bg-white p-4 shadow-sm">
+                            {/* DISPLAY A MATERIAL */}
+                            {block.blockType === "material" ? (
+                                <MaterialBlock content={block.content} />
+                            ) : (
+                                // DISPLAY A QUESTION OR SUBQUESTION
+                                <QuestionBlock
+                                    block={block}
+                                    setResponses={handleResponseChange}
+                                    responses={responses}
+                                    gradedResults={gradedResults}
+                                    finalScore={finalScore}
+                                    showExplanations={showExplanations}
+                                />
+                            )}
+                        </div>
+                    </div>
+                ))}
+                {mode === 'admin' && (
+                    <AIPrompt value={aiPrompt} onChange={handleAiPromptChange} />
+                )}
+
+                {/* //read only is for admin viewing in submission list */}
+                {!readOnly && (
+                    <>
+                        {/* BUTTON SUBMIT RESPONSE */}
+                        < button
+                            onClick={submitResponses}
+                            disabled={isSubmitting}
+                            className={`bg-purple-600 text-white px-4 py-2 rounded mt-4 flex items-center ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                                }`}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Submitting...
+                                </>
+                            ) : (
+                                'Submit'
+                            )}
+                        </button>
+                    </>
+                )}
+
+                {/*OUTPUT FINAL SCORE */}
+                {Object.keys(gradedResults).length > 0 && (
+                    <div className="mb-6 p-4 border rounded bg-blue-50">
+                        <h3 className="font-bold mb-2">Score 📊</h3>
+                        Total Score: {parseFloat(finalScore.totalScore).toFixed(2)} / {finalScore.maxScore}<br />{finalScore.percent}%
+                    </div>
+                )}
+            </div >
+        </>
+
+    )
+}
+
+
+export default LabPreview;

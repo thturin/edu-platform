@@ -1,0 +1,27 @@
+import React from 'react';
+
+const ScoreDisplay = ({ finalScore, gradedResults, questionId }) => {
+    //no finalResults means no submissions. Do not show score and feedback
+    if(!finalScore) return null;
+
+    let result = gradedResults[questionId];
+    if(!result){
+        result = {
+            score:0,
+            feedback: "no response"
+        };
+    }
+
+    return (
+        <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 shadow-[0_1px_0_rgba(16,185,129,0.08)]">
+            <div className="mb-1 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                Score & Feedback
+            </div>
+            <div className="leading-snug"><span className="font-semibold">Score:</span> {result?.score}</div>
+            <div className="leading-snug"><span className="font-semibold">Feedback:</span> {result?.feedback}</div>
+        </div>
+    );
+}
+
+export default ScoreDisplay;

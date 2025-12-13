@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+#FOR PRODUCTION. WILL GET OVERRIDED BY DOCKER-COMPOSE HOT RELOADING, ETC IN DEVELOPMENT
+RUN npm run build
+
+EXPOSE 3001
+ENV PORT=3001
+
+CMD ["npm", "start"]
