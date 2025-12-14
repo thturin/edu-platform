@@ -32,6 +32,25 @@ function LabPreview({
     const [sessionLoaded, setSessionLoaded] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const exportSessionToFile = () => {
+        const payload = {
+            title,
+            labId,
+            userId,
+            username,
+            session,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `session-${username || userId || 'anon'}-${labId || 'lab'}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
 
     //derive from session/setSession
     const responses = session.responses || {};
@@ -97,16 +116,16 @@ function LabPreview({
     }, [session, title, userId, labId, sessionLoaded]);
 
     //LOAD SESSION and LAB
-        useEffect(() => {
-            if (!assignmentId) return;
-            loadLab();
-        }, [assignmentId, reloadKey, loadLab]);
+    useEffect(() => {
+        if (!assignmentId) return;
+        loadLab();
+    }, [assignmentId, reloadKey, loadLab]);
 
-        useEffect(() => {
-            if (!labId || (!userId && !username)) return;
-            setSessionLoaded(false);
-            loadSession();
-        }, [labId, userId, username, reloadKey, loadSession]);
+    useEffect(() => {
+        if (!labId || (!userId && !username)) return;
+        setSessionLoaded(false);
+        loadSession();
+    }, [labId, userId, username, reloadKey, loadSession]);
 
     // AUTO SAVE SESSION - save 
     useEffect(() => { //useeffect cannot be async
@@ -145,7 +164,7 @@ function LabPreview({
                             answerKey = sq.key;
                             question = sq.prompt;
                             type = sq.type;
-            
+
                             break;
                         }
                     }
@@ -155,7 +174,7 @@ function LabPreview({
             if (!answerKey && !question && !type) {
                 continue;
             }
-  
+
             //DEEPSEEK API REQUEST
             try {
                 const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
@@ -175,9 +194,9 @@ function LabPreview({
                         feedback: response.data.feedback
                     }
                 }
-                console.log('updating graded results',newGradedResults);
+                console.log('updating graded results', newGradedResults);
             } catch (err) {
-                console.error("Error grading in LabPreview [LabPreview.jsx]",err.message);
+                console.error("Error grading in LabPreview [LabPreview.jsx]", err.message);
             }
         } //END OF FOR LOOP
 
@@ -185,7 +204,7 @@ function LabPreview({
         //WITH SCORE 0 AND NO RESPONSE
         allQuestions.forEach(q => {
             //if new gradedResults does not contain this id,
-            if (!newGradedResults[q.id] &&  q.isScored) {
+            if (!newGradedResults[q.id] && q.isScored) {
                 newGradedResults[q.id] = {
                     score: 0,
                     feedback: "left blank"
@@ -272,6 +291,19 @@ function LabPreview({
                 {mode === 'admin' && (
                     <AIPrompt value={aiPrompt} onChange={handleAiPromptChange} />
                 )}
+
+                {/* Export session for local testing */}
+
+                {mode === 'admin' && (
+                    <button
+                        onClick={exportSessionToFile}
+                        className="bg-slate-700 text-white px-4 py-2 rounded mt-4 mr-3"
+                        type="button"
+                    >
+                    Export Session JSON
+                    </button>
+                )}
+                        
 
                 {/* //read only is for admin viewing in submission list */}
                 {!readOnly && (
