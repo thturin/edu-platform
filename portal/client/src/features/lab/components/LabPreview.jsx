@@ -151,7 +151,8 @@ function LabPreview({
                 if (block.blockType === 'question' && block.isScored &&
                     (!block.subQuestions || block.subQuestions.length === 0) &&
                     block.id === questionId) {
-                    answerKey = block.key;
+                    // fall back to explanation if key is empty
+                    answerKey = block.key || block.explanation || '';
                     question = block.prompt;
                     type = block.type;
                     break;
@@ -161,17 +162,28 @@ function LabPreview({
                 if (block.blockType === 'question' && block.subQuestions && block.subQuestions.length > 0) {
                     for (const sq of block.subQuestions) {
                         if (sq.id === questionId && sq.isScored) {
-                            answerKey = sq.key;
+                            answerKey = sq.key || sq.explanation || '';
                             question = sq.prompt;
                             type = sq.type;
-
                             break;
                         }
                     }
                 }
             }
-            // If this response does not map to a scored question (if the isScored is false) skip grading
-            if (!answerKey && !question && !type) {
+            // If we can't identify question/type, skip. Allow empty answerKey (backend can auto-award).
+            if (!question || !type) {
+                continue;
+            }
+
+            // If no answer key or explanation, auto-award locally and skip backend
+            if (!answerKey) {
+                newGradedResults = {
+                    ...newGradedResults,
+                    [questionId]: {
+                        score: 1,
+                        feedback: 'Auto-awarded: no answer key provided',
+                    },
+                };
                 continue;
             }
 

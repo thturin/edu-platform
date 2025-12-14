@@ -3,16 +3,22 @@
 // Usage: from portal/server directory -> `node scripts/seedFakeSubmissions.js`
 
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// Load env from repo root (.env) so Docker/compose values are reused
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
-// Load env (DATABASE_URL) from the server .env
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { PrismaClient } = require('@prisma/client');
+
+const portalDbUrl = process.env.PORTAL_DATABASE_URL || process.env.DATABASE_URL;
+if (!portalDbUrl) {
+    throw new Error('Missing PORTAL_DATABASE_URL (or DATABASE_URL) in root .env');
+}
+
+const prisma = new PrismaClient({ datasources: { db: { url: portalDbUrl } } });
 
 async function main() {
     const SECTION_ID = 18; // set to your test section id
     const ASSIGNMENT_ID = 35; // set to your test assignment id
-    const USERS_TO_CREATE = 30;
+ 
 
     // Look up required records; abort if missing to avoid bad data
     const section = await prisma.section.findFirst({ where: { id: SECTION_ID } });
@@ -27,43 +33,8 @@ async function main() {
         return;
     }
 
-    // Wipe existing submissions for this assignment to avoid unique collisions
-    await prisma.submission.deleteMany({ where: { assignmentId: assignment.id } });
-
-    const submissions = [];
-    for (let i = 1; i <= USERS_TO_CREATE; i++) {
-        const username = `dev-student-${i}`;
-
-        let user = await prisma.user.findFirst({ where: { username } });
-        if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    username,
-                    firstName: 'Dev',
-                    lastName: `Student${i}`,
-                    role: 'student',
-                    sectionId: section.id,
-                    password: '123',
-                },
-            });
-        }
-
-        submissions.push({
-            url: `https://example.com/repo/${username}`,
-            language: 'javascript',
-            score: null,
-            rawScore: null,
-            feedback: null,
-            submittedAt: new Date(Date.now() - i * 60 * 60 * 1000),
-            assignmentId: assignment.id,
-            userId: user.id,
-        });
+  
     }
-
-    await prisma.submission.createMany({ data: submissions });
-
-    console.log(`Seeded ${USERS_TO_CREATE} submissions for assignment ${assignment.id} in section ${section.id}.`);
-}
 
 main()
     .catch((e) => {
