@@ -67,6 +67,21 @@ const getSessions = async (req, res) => {
     }
 }
 
+const getSessionsByLabId = async (req,res)=>{
+    const {labId} = req.query;
+    if(!labId) return res.status(400).json({error:'missing labId`   '});
+    try{
+        const sessions = await prisma.session.findMany({
+            where:{labId: Number(labId)}
+        });
+        return res.json(sessions);
+    }catch(err){
+        console.error('Error in getSessionsByAssignmentId()->', err);
+        return res.status(500).json({ error: 'Could not get sessions by assignmentId' });
+    }
+
+}
+
 const loadSession = async (req, res) => {
     const { labId } = req.params;
     const { userId, username, title } = req.query;
@@ -102,4 +117,4 @@ const loadSession = async (req, res) => {
     }
 }
 
-module.exports = { saveSession, loadSession, getSessions, deleteSession };
+module.exports = { saveSession, loadSession, getSessions, deleteSession ,getSessionsByLabId};

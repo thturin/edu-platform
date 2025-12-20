@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // Seed 30 fake student users for portal DB.
-// Usage: from portal/server directory -> `node scripts/seedFakeUsers.js`
 
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
@@ -27,7 +26,6 @@ async function main() {
     await prisma.user.upsert({
       where: { username },
       update: {
-        email,
         firstName: 'Dev',
         lastName: `Stud${i}`,
         role: 'student',

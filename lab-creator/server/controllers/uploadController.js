@@ -1,4 +1,3 @@
-const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -56,47 +55,6 @@ const processBlockImages = (blocks) => {
     return blocks;
 };
 
-
-
-
-
-// const storage = multer.diskStorage({
-//     destination: uploadsDir,
-//     filename: (req, file, cb) => {
-//         const ext = path.extname(file.originalname);
-//         const name = crypto.randomBytes(16).toString('hex') + ext;
-//         cb(null, name);
-//         //cb tells multer what to do next 
-//         //null = no error, name = use this file name
-//     }
-// });
-
-// const upload = multer({
-//     storage,
-//     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-//     //fileFilter->function to control which files get accepted
-//     fileFilter: (req, file, cb) => {
-//         if (/^image\/(png|jpe?g|gif|webp)$/i.test(file.mimetype)) {
-//             cb(null, true); //pass the file
-//         } else {
-//             cb(new Error('Only image files are allowed')); //dont pass the file
-//         }
-//     }
-// });
-
-// //uploads image from the uploads folder to the /images endpoint (url)
-// const handleImageUpload = async (req, res) => {
-//     try {
-//         if (!req.file) { //no file return 400 error
-//             return res.status(400).json({ error: 'No file uploaded' });
-//         };
-//         const url = `/images/${req.file.filename}`;
-//         return res.json({ url }); //add this to the json
-//     } catch (err) {
-//         console.error('error in handleImageUpload in uploadController', err.message);
-//         return res.status(500).json({ error: 'Upload failed' });
-//     }
-// }
 
 
 module.exports = { extractAndSaveImages, processBlockImages};

@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const parseScoreFeedback = (raw) => {
+const parseScoreFeedback = (raw) => { //enforce json return from deepseek
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     const score = Number(parsed?.score);

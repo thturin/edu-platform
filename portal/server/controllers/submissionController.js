@@ -2,7 +2,7 @@ const { parseISO } = require('date-fns');
 const { cloneRepo } = require('../services/gitService');
 const { gradeJavaSubmission } = require('../services/gradingService');
 const { PrismaClient } = require('@prisma/client');
-const {submissionRegradeDueDateQueue, submissionRegradeQueue} = require('../queues/submissionRegradeQueue');
+const { submissionRegradeDueDateQueue, submissionRegradeQueue } = require('../queues/submissionRegradeQueue');
 const prisma = new PrismaClient();
 require('dotenv').config();
 
@@ -116,14 +116,14 @@ const scoreGithubSubmission = async (url, path, assignmentTitle, submittedAt, du
         results = {
             ...results, //keep original results (output)
             score: finalScore, //score with applied late penalty
-            rawScore:results.score //raw Score (no penalty applied)
+            rawScore: results.score //raw Score (no penalty applied)
         }
         return results;
     } catch (err) {
         console.error("Error grading submission:", err);
         return {
             score: 0,
-            rawScore:0,
+            rawScore: 0,
             output: `❌ Failed to grade submission: ${err.message}`
         };
     }
@@ -157,7 +157,7 @@ const upsertGithubSubmission = async (req, res) => {
             },
             update: {
                 score: Number(result.score),
-                rawScore:Number(result.rawScore),
+                rawScore: Number(result.rawScore),
                 url,
                 submittedAt
             }
@@ -178,7 +178,7 @@ const upsertGithubSubmission = async (req, res) => {
 const upsertLabSubmission = async (req, res) => {
     const { assignmentId, userId, dueDate, score } = req.body;
     const submittedAt = new Date(); //create the submission date
-    let finalPercent = calculateLateScore(submittedAt,dueDate,score);
+    let finalPercent = calculateLateScore(submittedAt, dueDate, score);
 
     try {
         const submission = await prisma.submission.upsert({
@@ -190,14 +190,14 @@ const upsertLabSubmission = async (req, res) => {
             },
             create: {
                 score: Number(finalPercent),
-                rawScore:Number(score),
+                rawScore: Number(score),
                 assignmentId: Number(assignmentId),
                 userId: Number(userId),
                 submittedAt
             },
             update: {
                 score: Number(finalPercent),
-                rawScore:Number(score),
+                rawScore: Number(score),
                 submittedAt
             }
         });
@@ -212,30 +212,32 @@ const upsertLabSubmission = async (req, res) => {
 
 };
 
-const requestSubmissionRegradeDueDate = async (req,res) =>{
-    const {assignmentId} = req.body; 
+const requestSubmissionRegradeDueDate = async (req, res) => {
+    const { assignmentId } = req.body;
     if (!assignmentId) return res.status(400).json({ error: 'assignmentId is required' });
 
-  await submissionRegradeDueDateQueue .add('submission-regrade-duedate', { assignmentId: Number(assignmentId) });
-  return res.json({ status: 'queued' });
+    await submissionRegradeDueDateQueue.add('submission-regrade-duedate', { assignmentId: Number(assignmentId) });
+    return res.json({ status: 'queued' });
 
 };
 
-
 //WHEN USER CLICKS DRY RUN BUTTON, queue is called to regrade submissions
-const requestSubmissionRegrade = async(req,res) =>{
-    const {assignmentId,dryRun, sectionId} = req.body;
-    console.log();
-    if(!assignmentId) return res.status(400).json({error:'assignmentId is required'});
-    const job = await submissionRegradeQueue.add('submission-regrade',{
-        assignmentId:Number(assignmentId),
-        dryRun,
-        sectionId: sectionId ? Number(sectionId) : undefined
-    },{
-        removeOnComplete:false, removeOnFail:false
+const requestSubmissionRegrade = async (req, res) => {
+    const { assignmentId, dryRun, sectionId } = req.body;
+
+    if (!assignmentId) return res.status(400).json({ error: 'assignmentId is required' });
+    if (!sectionId) return res.status(400).json({ error: 'sectionId is required' });
+
+    const job = await submissionRegradeQueue.add('submission-regrade', {
+        assignmentId: Number(assignmentId),
+        sectionId: Number(sectionId),
+        dryRun
+    }, {
+        removeOnComplete: false, removeOnFail: false
     });
-    console.log('here is the job id ', job.id, 'section', sectionId);
-    return res.json({jobId:job.id});
+
+    console.log('Queued regrade job', job.id, 'for assignment', assignmentId, 'section', sectionId);
+    return res.json({ jobId: job.id, message: 'Regrade queued' });
 };
 
 //this is used to print dry regrade LOGS
@@ -311,8 +313,8 @@ const getAllSubmissions = async (req, res) => {
                         section: true, //include section
                     },
                 },
-                assignment:{
-                    select:{
+                assignment: {
+                    select: {
                         isDraft: true
                     }
                 }

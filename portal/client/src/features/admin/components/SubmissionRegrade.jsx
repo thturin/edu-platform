@@ -39,6 +39,10 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   };
 
   const runRegrade = async (dryRun) => {
+    // if (!assignmentId) {
+    //   setStatus('Select an assignment first.');
+    //   return;
+    // }
     const setLoadingState = dryRun ? setDryRunLoading : setApplyLoading;
     setLoadingState(true);
     try {
@@ -51,7 +55,6 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
         sectionId: resolvedSectionId
       });
       const statusData = await pollJobStatus(res.data.jobId);
-      console.log(statusData.data);
       if (!statusData) {
         setStatus(`${dryRun ? 'Dry run' : 'Regrade'} timed out before finishing.`);
         return;

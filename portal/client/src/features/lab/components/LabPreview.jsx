@@ -271,7 +271,7 @@ function LabPreview({
     return (
         <>
             {/* LAB PREVIEW */}
-            <div className="ml-8">
+            <div className="ml-8" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
                 <div className="mt-8 p-6 border rounded bg-gray-100">
                     <h2 className="text-xl font-bold mb-4">Lab Preview</h2>
                 </div>

@@ -5,21 +5,7 @@ const path = require('path');
 const folderPath = path.join(__dirname, '../templates');
 const csvParse = require('csv-parse/sync');
 
-console.log(process.env.NODE_ENV);
-const ensureTemplateFileFromEnv = () => {
-    console.log('LOOK HERE',process.env['89_CSV_TEMPLATE']);
-    console.log(process.env.NODE_ENV);
-    const base64Payload = process.env['89_CSV_TEMPLATE'];
-    if (!base64Payload) return;
-    if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-    }
-    const templatePath = path.join(folderPath, 'JUPITER_TEMPLATE_89.csv');
-    if (fs.existsSync(templatePath)) return;
-    fs.writeFileSync(templatePath, Buffer.from(base64Payload, 'base64'), 'utf8');
-};
 
-if(process.env.NODE_ENV==='production') ensureTemplateFileFromEnv();
 
 const exportAssignmentsCsvByName = async (req, res) => {
     try {
@@ -33,7 +19,6 @@ const exportAssignmentsCsvByName = async (req, res) => {
             },
             include: { user: true, assignment: true }
         });
-
 
         function toLastFirst(name) { //use last, first format for matching 'turin, tatiana'
             // Remove quotes and ID, then split
@@ -60,7 +45,9 @@ const exportAssignmentsCsvByName = async (req, res) => {
         const section = await prisma.section.findUnique({ where: { id: Number(sectionId) } });
         let templateFile = '';
         files.forEach(file => {
+            console.log(file);
             if (file.includes(section.sectionCode)) {
+                console.log('sectionCode found');
                 templateFile = path.join(folderPath, file);
             }
         });

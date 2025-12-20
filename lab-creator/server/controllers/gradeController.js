@@ -81,6 +81,14 @@ const regradeSession = async (req, res) => {
                     score: result.score,
                     feedback: result.feedback
                 };
+
+                //30+ simultaneous deepseek requests get 
+                //Error grading question 1765678253268 during regrade getaddrinfo EAI_AGAIN api.deepseek.com
+                //add a small delay
+                await new Promise(resolve => setTimeout(resolve,500)); //500 ms delay
+
+
+
             } catch (err) {
                 console.error(`Error grading question ${questionId} during regrade`, err.message);
             }

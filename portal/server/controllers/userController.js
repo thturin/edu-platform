@@ -1,8 +1,25 @@
 const {PrismaClient} = require('@prisma/client');
 const prisma = new PrismaClient();
 
-
-
+const getUsersBySection = async(req,res) => {
+    try {
+        const { sectionId } = req.query;
+        console.log('hello world');
+        if(!sectionId){
+            return res.status(400).json({ error: 'sectionId query parameter is required' });
+        }
+        
+        const users = await prisma.user.findMany({
+            where: { sectionId: parseInt(sectionId) },
+            select: { id: true, username: true }
+        });
+        
+        res.json(users);
+    } catch (err) {
+        console.error('Error fetching users by section:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
 const getAllUsers = async(req,res) =>{
     try{
         const users = await prisma.user.findMany({
@@ -43,4 +60,4 @@ const loginUser = async (req, res)=>{
     }
 };
 
-module.exports = {getAllUsers,loginUser};
+module.exports = {getAllUsers,loginUser, getUsersBySection};
