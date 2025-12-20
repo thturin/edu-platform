@@ -223,7 +223,7 @@ const requestSubmissionRegradeDueDate = async (req, res) => {
 
 //WHEN USER CLICKS DRY RUN BUTTON, queue is called to regrade submissions
 const requestSubmissionRegrade = async (req, res) => {
-    const { assignmentId, dryRun, sectionId } = req.body;
+    const { assignmentId, dryRun, sectionId, submissionIds } = req.body;
 
     if (!assignmentId) return res.status(400).json({ error: 'assignmentId is required' });
     if (!sectionId) return res.status(400).json({ error: 'sectionId is required' });
@@ -231,12 +231,14 @@ const requestSubmissionRegrade = async (req, res) => {
     const job = await submissionRegradeQueue.add('submission-regrade', {
         assignmentId: Number(assignmentId),
         sectionId: Number(sectionId),
+        submissionIds: submissionIds || null, // null means all submissions
         dryRun
     }, {
         removeOnComplete: false, removeOnFail: false
     });
 
-    console.log('Queued regrade job', job.id, 'for assignment', assignmentId, 'section', sectionId);
+    console.log('Queued regrade job', job.id, 'for assignment', assignmentId, 'section', sectionId, 
+                submissionIds ? `(${submissionIds.length} selected)` : '(all)');
     return res.json({ jobId: job.id, message: 'Regrade queued' });
 };
 
@@ -351,6 +353,7 @@ module.exports = {
     manualUpdateSubmissionGrade,
     upsertLabSubmission,
     upsertGithubSubmission,
+    scoreGithubSubmission,
     deleteSubmissions,
     calculateLateScore,
     requestSubmissionRegradeDueDate,

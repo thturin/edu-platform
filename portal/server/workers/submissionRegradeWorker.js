@@ -1,5 +1,5 @@
 const { Worker } = require('bullmq');
-const axios = require('axios');
+const axios = require('axios').default;
 const { PrismaClient } = require('@prisma/client');
 const { redisOptions } = require('../config/redis');
 const { calculateLateScore } = require('../controllers/submissionController');
@@ -37,19 +37,29 @@ workerDueDate.on('failed', (job, err) => console.error('Submission regrade faile
 // Removed unused buildFinalScore helper
 
 const worker = new Worker('submission-regrade', async job => {
-    const { dryRun, assignmentId, sectionId } = job.data;
+    const { dryRun, assignmentId, sectionId, submissionIds } = job.data;
+    //we are sending a list of submission id's to regrade, or null for all submissions in the assignment/section
     const dryRunSummaries = [];
 
     // Fetch all submissions for this assignment and section
     let submissions;
+    console.log('submissionIds',submissionIds);
     try {
+        const whereClause = { //find all submissions with the selected assignmenrtId and where the users have the selected sectionId
+            //also iterate through the submissionIds if not null
+            assignmentId: Number(assignmentId),
+            user: {
+                sectionId: Number(sectionId)
+            }
+        };
+
+        // If specific submissions selected, filter by IDs, else process all submissions
+        if (submissionIds && submissionIds.length > 0) {
+            whereClause.id = { in: submissionIds.map(id => Number(id)) };
+        }
+
         submissions = await prisma.submission.findMany({
-            where: {
-                assignmentId: Number(assignmentId),
-                user:{//since submissions does not have sectionId, query the user's sectionId
-                    sectionId:Number(sectionId)
-                }
-            },
+            where: whereClause,
             include: { assignment: true, user: true }
         });
     } catch (err) {
@@ -57,7 +67,8 @@ const worker = new Worker('submission-regrade', async job => {
         return { error: err.message };
     }
 
-    console.log(`Processing ${submissions.length} submissions for assignment ${assignmentId}, section ${sectionId}`);
+    const selectionMsg = submissionIds ? `(${submissionIds.length} selected)` : '(all)';
+    console.log(`Processing ${submissions.length} submissions ${selectionMsg} for assignment ${assignmentId}, section ${sectionId}`);
 
     for (let i = 0; i < submissions.length; i++) {
         const submission = submissions[i];
@@ -186,6 +197,8 @@ const worker = new Worker('submission-regrade', async job => {
                 }
             }
 
+            
+
         } catch (err) {
             console.error('Error processing submission', submission.id, err.message);
             // Continue to next submission instead of stopping
@@ -206,9 +219,6 @@ const worker = new Worker('submission-regrade', async job => {
 }, {
     connection: redisOptions,
     lockDuration: 300000, // 5 minutes (not 30000 = 30s)
-    settings: {
-        stalledInterval: 120000
-    },
     concurrency: 1
 });
 

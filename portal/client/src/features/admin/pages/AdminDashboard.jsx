@@ -153,6 +153,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                                 assignmentId={selectedAssignmentId}
                                 onRegradeApplied={() => setLabRefreshKey(key => key + 1)}
                                 selectedSection={selectedSection}
+                                submissions={filteredSubs}
                             />
 
                             <SubmissionList
@@ -192,7 +193,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                                         title={title}
                                         setTitle={setTitle}
                                         assignmentId={selectedAssignmentId}
-                                        onAssignmentUpdate={onAssignmentUpdate}
                                         mode='admin'
                                         userId={selectedSubmission.userId}
                                         username={selectedSubmission.user.username}
@@ -202,8 +202,9 @@ const AdminDashboard = ({ user, onLogout }) => {
                                         handleAiPromptChange={handleAiPromptChange}
                                         aiPrompt={aiPrompt}
                                         setAiPrompt={setAiPrompt}
-                                        reloadKey={labRefreshKey}
-
+                                        reloadKey={labRefreshKey} 
+                                        selectedAssignmentDueDate={undefined} 
+                                        onUpdateSubmission={undefined}
                                     />
                                 </div>
                             )}
@@ -267,7 +268,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                             setSelectedAssignmentId={setSelectedAssignmentId}
                             selectedAssignmentId={selectedAssignmentId}
                             assignments={assignments}
-                            setAssignments={setAssignments}
                             selectedAssignmentObj={selectedAssignmentObj}
                             setTitle={setTitle}
                             onAssignmentUpdate={onAssignmentUpdate}
@@ -304,8 +304,10 @@ const AdminDashboard = ({ user, onLogout }) => {
                         handleAiPromptChange={handleAiPromptChange}
                         aiPrompt={aiPrompt}
                         setAiPrompt={setAiPrompt}
-                        reloadKey={labRefreshKey}
-                    />
+                        reloadKey={labRefreshKey} 
+                        selectedAssignmentDueDate={undefined} 
+                        readOnly={undefined} 
+                        onUpdateSubmission={undefined}                    />
                 )}
             </div>
         </div>

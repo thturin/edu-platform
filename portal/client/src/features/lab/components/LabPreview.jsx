@@ -346,7 +346,7 @@ function LabPreview({
                 {Object.keys(gradedResults).length > 0 && (
                     <div className="mb-6 p-4 border rounded bg-blue-50">
                         <h3 className="font-bold mb-2">Score 📊</h3>
-                        Total Score: {parseFloat(finalScore.totalScore).toFixed(2)} / {finalScore.maxScore}<br />{finalScore.percent}%
+                        Total Score: {parseFloat(finalScore?.totalScore).toFixed(2)} / {finalScore?.maxScore}<br />{finalScore?.percent}%
                     </div>
                 )}
             </div >
