@@ -346,6 +346,16 @@ const deleteSubmissions = async (req, res) => {
     }
 }
 
+const clearRegradeQueue = async (req, res) => {
+    try{
+        await submissionRegradeQueue.obliterate({ force: true });
+        return res.json({ message: 'Queue cleared' });
+    }catch(err){
+        console.error('Error clearing queue', err);
+        return res.status(500).json({ error: err.message });
+    }
+}
+
 module.exports = {
     verifyGithubOwnership,
     getAllSubmissions,
@@ -358,5 +368,6 @@ module.exports = {
     calculateLateScore,
     requestSubmissionRegradeDueDate,
     requestSubmissionRegrade,
-    getSubmissionRegradeStatus
+    getSubmissionRegradeStatus,
+    clearRegradeQueue
 };

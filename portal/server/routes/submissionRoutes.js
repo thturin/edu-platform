@@ -10,7 +10,8 @@ const {
     getAllSubmissions,
     getSubmission,
     manualUpdateSubmissionGrade,
-    deleteSubmissions} = require('../controllers/submissionController'); //call the handleSubmission function from submissionController 
+    deleteSubmissions,
+clearRegradeQueue} = require('../controllers/submissionController'); //call the handleSubmission function from submissionController 
 
 
 // benefits of adding middleware
@@ -40,8 +41,8 @@ router.post('/submissions/update-late-grade',requestSubmissionRegradeDueDate);
 router.post('/submissions/manual-regrade',manualUpdateSubmissionGrade);
 router.post('/submissions/regrade',requestSubmissionRegrade);
 router.get('/submissions/regrade/:jobId',getSubmissionRegradeStatus);
+router.delete('/submissions/regrade/clear-queue', clearRegradeQueue);
 router.post('/verify-github-ownership',verifyGithubOwnership);
 router.delete('/submissions/delete-submissions/:assignmentId',deleteSubmissions);
-
 
 module.exports = router; //export router object so your main server file can use it

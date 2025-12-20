@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeApplied = () => {}, submissions = [] }) => {
@@ -9,6 +9,9 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   const [dryRunSummaries, setDryRunSummaries] = useState([]);
   const [selectedSubmissions, setSelectedSubmissions] = useState([]);
   const [showSubmissionSelector, setShowSubmissionSelector] = useState(false);
+  const abortPollingRef = useRef(false); //to abort async polling if async clearQueue is clicked 
+
+  
 
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -37,7 +40,12 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   const pollJobStatus = async (jobId) => {
     const maxAttempts = 240; // wait up to ~4 minutes
     let lastState = null;
+    abortPollingRef.current = false; // Reset abort flag at start
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if(abortPollingRef.current){
+        console.log('Polling aborted for jobId',jobId);
+        return null;
+      }
       try {
         const statusRes = await axios.get(
           //print logs 
@@ -80,7 +88,10 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
       });
       const statusData = await pollJobStatus(res.data.jobId);
       if (!statusData) {
-        setStatus(`${dryRun ? 'Dry run' : 'Regrade'} timed out before finishing.`);
+        // Only set timeout message if not aborted
+        if (!abortPollingRef.current) {
+          setStatus(`${dryRun ? 'Dry run' : 'Regrade'} timed out before finishing.`);
+        }
         return;
       }
 
@@ -97,11 +108,34 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
         onRegradeApplied(); //tells the labpreview to refresh
       }
     } catch (err) {
-      setStatus(`Failed to queue ${dryRun ? 'dry run' : 'regrade'}: ${err.response?.data?.error || err.message}`);
+      if (!abortPollingRef.current) {
+        setStatus(`Failed to queue ${dryRun ? 'dry run' : 'regrade'}: ${err.response?.data?.error || err.message}`);
+      }
     } finally {
-      setLoadingState(false);
+      // Don't reset loading state if aborted (clearQueue already did it)
+      if (!abortPollingRef.current) {
+        setLoadingState(false);
+      }
     }
   };
+
+  const clearQueue = async() =>{
+    // Abort polling immediately
+    abortPollingRef.current = true;
+    setDryRunLoading(false);
+    setApplyLoading(false);
+    
+    try{
+      await axios.delete(`${process.env.REACT_APP_API_HOST}/submissions/regrade/clear-queue`);
+      setStatus('Regrade queue cleared');  
+      setDryRunSummaries([]);
+    }catch(err){
+      console.error('Clear queue error:', err);
+      setStatus(`Error clearing queue: ${err.response?.data?.error || err.message}`);
+      // Even if API fails, still clear local state
+      setDryRunSummaries([]);
+    }
+  }
 
   return (
     <div style={{ marginTop: '1rem' }}>
@@ -165,6 +199,7 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
         </div>
       )}
 
+      {/* //DRY RUN REGRADE BUTTON */}
       <button
         onClick={() => runRegrade(true)}
         disabled={dryRunLoading || applyLoading || !assignmentId}
@@ -183,25 +218,48 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
           ? `Dry Regrade ${selectedSubmissions.length} Selected` 
           : 'Dry Regrade All Submissions'}
       </button>
+
       {dryRunSummaries.length > 0 && ( //if ther was a dry run queued, show the button to actually run regrade and apply submissions
-        <button
-          onClick={() => runRegrade(false)}
-          disabled={applyLoading || !assignmentId}
-          style={{
-            marginLeft: '12px',
-            padding: '10px 16px',
-            borderRadius: '6px',
-            fontWeight: '600',
-            border: 'none',
-            cursor: applyLoading || !assignmentId ? 'not-allowed' : 'pointer',
-            opacity: applyLoading || !assignmentId ? 0.6 : 1,
-            backgroundColor: '#059669',
-            color: '#fff'
-          }}
-        >
-          {applyLoading ? 'Applying…' : 'Apply Regrade Updates'}
-        </button>
+        <>
+          <button
+            onClick={() => runRegrade(false)}
+            disabled={applyLoading || !assignmentId}
+            style={{
+              marginLeft: '12px',
+              padding: '10px 16px',
+              borderRadius: '6px',
+              fontWeight: '600',
+              border: 'none',
+              cursor: applyLoading || !assignmentId ? 'not-allowed' : 'pointer',
+              opacity: applyLoading || !assignmentId ? 0.6 : 1,
+              backgroundColor: '#059669',
+              color: '#fff'
+            }}
+          >
+            {applyLoading ? 'Applying…' : 'Apply Regrade Updates'}
+          </button>
+         
+        </>
       )}
+
+       <button
+            onClick={clearQueue}
+            disabled={applyLoading}
+            style={{
+              marginLeft: '12px',
+              padding: '10px 16px',
+              borderRadius: '6px',
+              fontWeight: '600',
+              border: 'none',
+              cursor: applyLoading ? 'not-allowed' : 'pointer',
+              opacity: applyLoading ? 0.6 : 1,
+              backgroundColor: '#dc2626',
+              color: '#fff'
+            }}
+          >
+            Clear Results
+          </button>
+
       {status && <p style={{ marginTop: '0.5rem' }}>{status}</p>}
       {dryRunSummaries.length > 0 && (
         <div style={{ marginTop: '0.75rem' }}>
