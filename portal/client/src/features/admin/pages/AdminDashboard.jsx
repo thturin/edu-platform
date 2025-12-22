@@ -51,6 +51,18 @@ const AdminDashboard = ({ user, onLogout }) => {
         }
     );
 
+    const onUpdateSubmission = (updatedSubmission)=>{
+        setSubmissions(prev=>prev.map(sub=>{
+            if (sub.id === updatedSubmission.id) {
+                return {
+                    ...sub,
+                    score: updatedSubmission.score
+                }
+            }
+            return sub;
+        }))
+    };
+
 
     //fetch assignmenbts, submissions, and sections
     useEffect(() => {
@@ -106,6 +118,18 @@ const AdminDashboard = ({ user, onLogout }) => {
         console.log(assignments);
         console.log(submissions);
     }
+
+    const handleSubmissionUpdate = (newScore) => {
+        setSubmissions(prev => prev.map(sub => {
+            if (sub.id === Number(selectedSubmissionId)) {
+                return {
+                    ...sub,
+                    score: newScore
+                };
+            }
+            return sub;
+        }));
+    };
 
     const handleTabSelect = (tab) => {
         setCurrentTab(tab);
@@ -204,7 +228,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                                         setAiPrompt={setAiPrompt}
                                         reloadKey={labRefreshKey} 
                                         selectedAssignmentDueDate={undefined} 
-                                        onUpdateSubmission={undefined}
+                                        onUpdateSubmission={handleSubmissionUpdate}
                                     />
                                 </div>
                             )}

@@ -5,8 +5,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 
-const deleteSession = async (req,res) =>{
-    const {labId} = req.params;
+const deleteSession = async (req, res) => {
+    const { labId } = req.params;
     if (!labId) return res.status(400).json({ error: 'missing assignment Id' });
 
     try {
@@ -18,7 +18,8 @@ const deleteSession = async (req,res) =>{
         console.error('Error deleting session:', err);
         res.status(500).json({ error: 'Failed to delete session' });
     }
-    return res.json({ message: 'Assignment and associated data deleted successfully' });}
+    return res.json({ message: 'Assignment and associated data deleted successfully' });
+}
 
 
 const saveSession = async (req, res) => {
@@ -33,21 +34,21 @@ const saveSession = async (req, res) => {
         //upsert updates if session exists, or create if it does not
         const newSession = await prisma.session.upsert({
             where: { labId_userId: { labId, userId } },
-            update: { 
+            update: {
                 labTitle,
                 username,
                 responses,
                 gradedResults,
                 finalScore
-             },
+            },
             create: {
-                labId, 
+                labId,
                 labTitle,
                 username,
                 userId,
                 responses,
                 gradedResults,
-                finalScore 
+                finalScore
             }
         });
         return res.json({ message: 'Session Saved', newSession });
@@ -67,20 +68,59 @@ const getSessions = async (req, res) => {
     }
 }
 
-const getSessionsByLabId = async (req,res)=>{
-    const {labId} = req.query;
-    if(!labId) return res.status(400).json({error:'missing labId`   '});
-    try{
+const getSessionsByLabId = async (req, res) => {
+    const { labId } = req.query;
+    if (!labId) return res.status(400).json({ error: 'missing labId`   ' });
+    try {
         const sessions = await prisma.session.findMany({
-            where:{labId: Number(labId)}
+            where: { labId: Number(labId) }
         });
         return res.json(sessions);
-    }catch(err){
+    } catch (err) {
         console.error('Error in getSessionsByAssignmentId()->', err);
         return res.status(500).json({ error: 'Could not get sessions by assignmentId' });
     }
 
 }
+
+const manualGradeSessionQuestion = async (req, res) => {
+    const { id } = req.params;
+    const { questionId, score } = req.body;
+    if (!questionId || score === undefined) return res.status(400).json({ error: 'missing questionId or score' });
+    if (!id) return res.status(400).json({ error: 'missing id' });
+    try {
+        const session = await prisma.session.findUnique({
+            where: { id: id }
+        });
+
+        const gradedResults = session.gradedResults || {};
+        //update gradedResults with new data from req.body
+        if (!gradedResults[questionId]) {
+            return res.status(400).json({ error: `No existing graded result for questionId ${questionId}` });
+        }
+        gradedResults[questionId] = { score };
+
+        // Recalculate final score
+        const totalScore = Object.values(gradedResults).reduce((sum, result) => sum + (result.score || 0), 0);
+        const maxScore = Object.keys(gradedResults).length; // Or get from lab config
+        const percent = maxScore > 0 ? ((totalScore / maxScore) * 100).toFixed(2) : 0;
+        const finalScore = {
+            totalScore,
+            maxScore,
+            percent
+        };
+
+        let newSession = await prisma.session.update({
+            where: { id: id },
+            data: { gradedResults, finalScore}
+        });
+        return res.json(newSession);
+
+    } catch (err) {
+        console.error('Error in getSessionById()->', err);
+        return res.status(500).json({ error: 'Could not get session by id' });
+    }
+};
 
 const loadSession = async (req, res) => {
     const { labId } = req.params;
@@ -90,7 +130,7 @@ const loadSession = async (req, res) => {
         let session = await prisma.session.findUnique({
             where: { labId_userId: { labId: Number(labId), userId: Number(userId) } }
         });
-    
+
         if (!session) {
             console.log('No session found, creating new one');
             session = await prisma.session.create({
@@ -106,8 +146,8 @@ const loadSession = async (req, res) => {
                 }
             });
 
-        }else{
-           // console.log('session already exists->',JSON.stringify(session));
+        } else {
+            // console.log('session already exists->',JSON.stringify(session));
         }
         //console.log(JSON.stringify(session));
         return res.json({ session });
@@ -117,4 +157,4 @@ const loadSession = async (req, res) => {
     }
 }
 
-module.exports = { saveSession, loadSession, getSessions, deleteSession ,getSessionsByLabId};
+module.exports = { manualGradeSessionQuestion, saveSession, loadSession, getSessions, deleteSession, getSessionsByLabId };

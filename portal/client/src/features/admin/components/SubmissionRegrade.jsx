@@ -11,8 +11,6 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   const [showSubmissionSelector, setShowSubmissionSelector] = useState(false);
   const abortPollingRef = useRef(false); //to abort async polling if async clearQueue is clicked 
 
-  
-
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Reset selected submissions when assignment or section changes
@@ -42,7 +40,7 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
     let lastState = null;
     abortPollingRef.current = false; // Reset abort flag at start
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      if(abortPollingRef.current){
+      if(abortPollingRef.current){ //if user clicked clearQueue button, abort polling
         console.log('Polling aborted for jobId',jobId);
         return null;
       }
@@ -128,11 +126,11 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
     try{
       await axios.delete(`${process.env.REACT_APP_API_HOST}/submissions/regrade/clear-queue`);
       setStatus('Regrade queue cleared');  
-      setDryRunSummaries([]);
     }catch(err){
       console.error('Clear queue error:', err);
       setStatus(`Error clearing queue: ${err.response?.data?.error || err.message}`);
-      // Even if API fails, still clear local state
+    } finally {
+      // Always clear summaries regardless of success/failure
       setDryRunSummaries([]);
     }
   }

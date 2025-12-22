@@ -51,7 +51,6 @@ function LabPreview({
         URL.revokeObjectURL(url);
     };
 
-
     //derive from session/setSession
     const responses = session.responses || {};
     const gradedResults = session.gradedResults;
@@ -65,6 +64,18 @@ function LabPreview({
             responses: { ...prev.responses, [questionId]: value }
         }));
     }
+
+    const handleScoreOverride = ({gradedResults, finalScore}) => { //desctructure {} insTEAD OF (DATA)
+        setSession(prev=>({
+            ...prev,
+            gradedResults,
+            finalScore
+        }));
+
+        if(onUpdateSubmission){
+            onUpdateSubmission(finalScore.percent);
+        }
+    };
 
     //all questions that are being scored. questions that are not being scored are ignored
     const scoredNoSubQuestions = blocks.filter(
@@ -224,6 +235,7 @@ function LabPreview({
             }
         });
         //CALCULATE FINAL SCORE
+        //CALCULATE FINAL SCORE
         let newFinalScorePercent;
         //console.log(newGradedResults);
         try {
@@ -295,6 +307,9 @@ function LabPreview({
                                     gradedResults={gradedResults}
                                     finalScore={finalScore}
                                     showExplanations={showExplanations}
+                                    isAdmin={isAdmin}
+                                    sessionId={session.id}
+                                    onScoreUpdated={handleScoreOverride}
                                 />
                             )}
                         </div>

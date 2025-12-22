@@ -1,6 +1,7 @@
 import React from 'react';
+import ScoreOverride from './ScoreOverride';
 
-const ScoreDisplay = ({ finalScore, gradedResults, questionId }) => {
+const ScoreDisplay = ({ sessionId, finalScore, gradedResults, questionId, isAdmin, maxPoints = 1, onScoreUpdated }) => {
     //no finalResults means no submissions. Do not show score and feedback
     if(!finalScore) return null;
 
@@ -18,7 +19,18 @@ const ScoreDisplay = ({ finalScore, gradedResults, questionId }) => {
                 <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
                 Score & Feedback
             </div>
-            <div className="leading-snug"><span className="font-semibold">Score:</span> {result?.score}</div>
+            <div className="leading-snug">
+                <span className="font-semibold">Score:</span> {result?.score}
+                {isAdmin && (
+                    <ScoreOverride 
+                        sessionId={sessionId}
+                        questionId={questionId}
+                        currentScore={result?.score}
+                        maxPoints={maxPoints}
+                        onScoreUpdated={onScoreUpdated}
+                    />
+                )}
+            </div>
             <div className="leading-snug"><span className="font-semibold">Feedback:</span> {result?.feedback}</div>
         </div>
     );

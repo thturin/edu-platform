@@ -6,9 +6,7 @@ import 'react-quill/dist/quill.snow.css';
 import { getImageUrlsFromHtml } from './fetchImages';
 
 
-
-
-const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults, finalScore, block, showExplanations }) => {
+const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults, finalScore, block, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
     const isScored = block.isScored;
     //const showExplanation = !isScored || hasGradedResultForBlock(block, gradedResults);
     
@@ -29,6 +27,10 @@ const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults,
                 finalScore={finalScore}
                 gradedResults={gradedResults}
                 questionId={blockId}
+                isAdmin={isAdmin}
+                maxPoints={1}
+                sessionId={sessionId}
+                onScoreUpdated={onScoreUpdated}
             />
     }
         
@@ -38,7 +40,7 @@ const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults,
     );
 };
 
-const SubQuestionEditor = ({ question, responses, setResponses, gradedResults, finalScore, showExplanations }) => {
+const SubQuestionEditor = ({ question, responses, setResponses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
     const isScored = question.isScored;
     //const showExplanation = !isScored || hasGradedResultForBlock(question, gradedResults);
 
@@ -62,6 +64,10 @@ const SubQuestionEditor = ({ question, responses, setResponses, gradedResults, f
                     finalScore={finalScore}
                     gradedResults={gradedResults}
                     questionId={question.id}
+                    isAdmin={isAdmin}
+                    maxPoints={1}
+                    sessionId={sessionId}
+                    onScoreUpdated={onScoreUpdated}
                 />
             }
             
@@ -70,7 +76,7 @@ const SubQuestionEditor = ({ question, responses, setResponses, gradedResults, f
     );
 };
 
-const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalScore, showExplanations }) => {
+const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
     return (
         <div>
             <div 
@@ -88,6 +94,9 @@ const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalSco
                             gradedResults={gradedResults}
                             finalScore={finalScore}
                             showExplanations={showExplanations}
+                            isAdmin={isAdmin}
+                            sessionId={sessionId}
+                            onScoreUpdated={onScoreUpdated}
                         />
                     ))}
                 </div>
@@ -99,9 +108,10 @@ const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalSco
                     gradedResults={gradedResults}
                     finalScore={finalScore}
                     block={block}
-                    isScored={block.isScored}
-                    explanation={block.explanation}
                     showExplanations={showExplanations}
+                    isAdmin={isAdmin}
+                    sessionId={sessionId}
+                    onScoreUpdated={onScoreUpdated}
                 />
             )}
 
