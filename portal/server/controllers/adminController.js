@@ -8,8 +8,20 @@ const csvParse = require('csv-parse/sync');
 
 
 const exportAssignmentsCsvByName = async (req, res) => {
+    // Only admins can export
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    
     try {
         const { assignmentId, sectionId } = req.query;
+        
+        // Regular admin: verify they manage this section
+        if (!req.user.isSuperAdmin) {
+            if (!req.user.adminSectionIds.includes(Number(sectionId))) {
+                return res.status(403).json({ error: 'Access denied to this section' });
+            }
+        }
 
         // Fetch submissions and map by normalized name
         const submissions = await prisma.submission.findMany({
@@ -114,8 +126,21 @@ const exportAssignmentsCsvByName = async (req, res) => {
 }
 
 const exportAssignmentsCsv = async (req, res) => {
+        // Only admins can export
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+
     try {
         const { assignmentId, sectionId } = req.query; //the query params from front end url 
+
+          // Regular admin: verify they manage this section
+        if (!req.user.isSuperAdmin) {
+            if (!req.user.adminSectionIds.includes(Number(sectionId))) {
+                return res.status(403).json({ error: 'Access denied to this section' });
+            }
+        }
 
         //find submissions with the same assignmentId and users in the sectionId
         let searchCriteria = {

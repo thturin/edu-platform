@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const {exportAssignmentsCsv,exportAssignmentsCsvByName} = require('../controllers/adminController');
+const { exportAssignmentsCsvByName } = require('../controllers/adminController');
+const { requireAuth } = require('../middleware/authentication');
 
 //ROOT LOCALHOST:5000/api/admin
 
-router.get('/exportAssignment',exportAssignmentsCsvByName);
+router.get('/exportAssignment', requireAuth, exportAssignmentsCsvByName);
 
 
 module.exports = router;

@@ -61,7 +61,7 @@ const sessionOptions = {
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    name: 'studentPortalSession',
+    name: 'PraxisLabSession',//no spaces or special characters
     cookie: {
         maxAge: 60*60*1000,
                 sameSite: isLocalClient ? 'lax': 'none',
@@ -88,6 +88,7 @@ if(process.env.RUN_ASSIGNMENT_WORKER!=='false'){
 
 //app.use required MIDDLEWARE function session()
 app.use(session(sessionOptions));
+
 
 
 app.get('/', (req, res)=>{

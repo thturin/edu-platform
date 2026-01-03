@@ -308,24 +308,46 @@ const getSubmission = async (req, res) => {
 
 const getAllSubmissions = async (req, res) => {
     try {
-        const submissions = await prisma.submission.findMany({
-            include: {
-                user: {
-                    include: {
-                        section: true, //include section
-                    },
-                },
-                assignment: {
-                    select: {
-                        isDraft: true
-                    }
+        const { role, isSuperAdmin, adminSectionIds, sectionId, id: userId } = req.user;
+        
+        // Student: see only their own submissions
+        if (role === 'student') {
+            const submissions = await prisma.submission.findMany({
+                where: { userId: userId },
+                include: {
+                    user: { include: { section: true } },
+                    assignment: { select: { isDraft: true } }
                 }
+            });
+            return res.json(submissions);
+        }
+        
+        // Super admin: see all submissions
+        if (isSuperAdmin) {
+            const submissions = await prisma.submission.findMany({
+                include: {
+                    user: { include: { section: true } },
+                    assignment: { select: { isDraft: true } }
+                }
+            });
+            return res.json(submissions);
+        }
+        
+        // Regular admin: see submissions from students in their sections
+        const submissions = await prisma.submission.findMany({
+            where: {
+                user: { sectionId: { in: adminSectionIds || [] } }
             },
+            include: {
+                user: { include: { section: true } },
+                assignment: { select: { isDraft: true } }
+            }
         });
-        res.json(submissions);
+        return res.json(submissions);
+        
     } catch (err) {
         console.log(err);
-        res.status(500).json({ error: 'Failed to fetch' })
+        res.status(500).json({ error: 'Failed to fetch' });
     }
 };
 
@@ -346,6 +368,8 @@ const deleteSubmissions = async (req, res) => {
     }
 }
 
+//CLEAR THE REGRADE QUEUE.
+//if admin made a mistake and queued the wrong regrade, they can clear the queue
 const clearRegradeQueue = async (req, res) => {
     try{
         await submissionRegradeQueue.obliterate({ force: true });

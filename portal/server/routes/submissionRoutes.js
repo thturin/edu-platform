@@ -11,38 +11,22 @@ const {
     getSubmission,
     manualUpdateSubmissionGrade,
     deleteSubmissions,
-clearRegradeQueue} = require('../controllers/submissionController'); //call the handleSubmission function from submissionController 
+    clearRegradeQueue
+} = require('../controllers/submissionController');
+const {requireAuth} = require('../middleware/authentication');
 
-
-// benefits of adding middleware
-// 1. security _ prevents unauthenticated users from submitting assignments
-// 2. can access req.user in all your controllers for github verification
-// 3. protection 
-
-//wasn't working initially because the frontend wasn't sending session cookies 
-const ensureAuthenticated = (req,res,next)=>{
-    // console.log( 'AUTH CHECK',{
-    //     isAuthenticated: req.isAuthenticated(),
-    //     user:req.u
-    // });
-    // if(req.isAuthenticated()){
-    //     return next();
-    // }
-    // res.status(401).json({error:'Authentication is required'});
-}
-//router.get('/submissions', ensureAuthenticated, getAllSubmissions); // 
 
 //ROOT / ISS LOCALHOST:5000/api
-router.get('/submissions', getAllSubmissions); //this pathway is relative to the base path set in app.js (api/submit)
-router.get('/submissions/:id',getSubmission);
-router.post('/submissions/upsertLab',upsertLabSubmission);
-router.post('/submissions/upsertGithub',upsertGithubSubmission);
-router.post('/submissions/update-late-grade',requestSubmissionRegradeDueDate);
-router.post('/submissions/manual-regrade',manualUpdateSubmissionGrade);
-router.post('/submissions/regrade',requestSubmissionRegrade);
-router.get('/submissions/regrade/:jobId',getSubmissionRegradeStatus);
-router.delete('/submissions/regrade/clear-queue', clearRegradeQueue);
-router.post('/verify-github-ownership',verifyGithubOwnership);
-router.delete('/submissions/delete-submissions/:assignmentId',deleteSubmissions);
+router.get('/submissions', requireAuth, getAllSubmissions); //this pathway is relative to the base path set in app.js (api/submit)
+router.get('/submissions/:id', requireAuth, getSubmission);
+router.post('/submissions/upsertLab', requireAuth, upsertLabSubmission);
+router.post('/submissions/upsertGithub', requireAuth, upsertGithubSubmission);
+router.post('/submissions/update-late-grade', requireAuth, requestSubmissionRegradeDueDate);
+router.post('/submissions/manual-regrade', requireAuth, manualUpdateSubmissionGrade);
+router.post('/submissions/regrade', requireAuth, requestSubmissionRegrade);
+router.get('/submissions/regrade/:jobId', requireAuth, getSubmissionRegradeStatus);
+router.delete('/submissions/regrade/clear-queue', requireAuth, clearRegradeQueue);
+router.post('/verify-github-ownership', requireAuth, verifyGithubOwnership);
+router.delete('/submissions/delete-submissions/:assignmentId', requireAuth, deleteSubmissions);
 
 module.exports = router; //export router object so your main server file can use it
