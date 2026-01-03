@@ -89,8 +89,6 @@ if(process.env.RUN_ASSIGNMENT_WORKER!=='false'){
 //app.use required MIDDLEWARE function session()
 app.use(session(sessionOptions));
 
-
-
 app.get('/', (req, res)=>{
     res.send('Backend is running!');
     console.log(req);
@@ -101,45 +99,11 @@ app.get('/health', (req,res)=>{
   res.json({
     status:'healthy',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'empty'
   });
 });
 
-// Add this route to see environment variables via HTTP
-app.get('/health-debug', (req, res) => {
-    try {
-        res.json({
-            status: 'Railway Backend Running',
-            environment: {
-                CLIENT_URL: process.env.CLIENT_URL,
-                SERVER_url: process.env.SERVER_URL,
-                NODE_ENV: process.env.NODE_ENV,
-                PORT: process.env.PORT,
-                SESSION_SECRET: process.env.SESSION_SECRET ? 'SET' : 'MISSING',
-                DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'MISSING',
-
-
-            },
-            request: {
-                origin: req.headers.origin,
-                host: req.headers.host,
-                userAgent: req.headers['user-agent']
-            },
-            cors: {
-                expectedOrigin: process.env.CLIENT_URL,
-                actualOrigin: req.headers.origin || 'NULL',
-                matches: req.headers.origin === process.env.CLIENT_URL
-            },
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        res.status(500).json({
-            error: error.message,
-            stack: error.stack
-        });
-    }
-});
-
+//API ROUTES
 app.use('/api/', submissionRoutes); //call the router object in submissionRoutes (it is exported)
 app.use('/api/assignments', assignmentRoutes); //call the router object in assignmentRoutes
 app.use('/api/',userRoutes);//two different endpoints /users and /login

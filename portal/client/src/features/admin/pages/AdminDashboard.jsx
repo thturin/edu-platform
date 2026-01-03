@@ -297,6 +297,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                             onAssignmentUpdate={onAssignmentUpdate}
                             onAssignmentDelete={onAssignmentDelete}
                             onAssignmentCreate={onAssignmentCreate}
+                            sections={sections}
                         />
                         {selectedAssignmentObj?.type === 'lab' && (
                             <LabBuilder

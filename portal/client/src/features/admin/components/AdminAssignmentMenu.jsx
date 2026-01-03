@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CreateAssignment from './CreateAssignment';
 import EditAssignment from './EditAssignment';
+import { useMemo } from 'react';
 
 const AdminAssignmentMenu = ({
     setSelectedAssignmentId,
@@ -10,13 +11,57 @@ const AdminAssignmentMenu = ({
     setTitle,
     onAssignmentUpdate,
     onAssignmentDelete,
-    onAssignmentCreate
+    onAssignmentCreate,
+    sections
 }) => {
 
-
+    const [expandedSections, setExpandedSections] = useState({});
     const showCreateAssignment = selectedAssignmentId === -2;
 
-    
+    const sectionColors = [
+        '#e8f0f7', // muted blue
+        '#f0e8f5', // muted purple
+        '#e8f3e8', // muted green
+        '#f7f0e8', // muted orange/beige
+        '#f5e8f0', // muted pink
+        '#e8f3f1', // muted teal
+        '#f3f5e8', // muted lime/yellow
+        '#ede8f3', // muted deep purple
+    ];
+
+    // Group assignments by section
+    const assignmentsBySection = useMemo(() => {
+        const grouped = {};
+        
+        assignments.forEach(assignment => {
+            const sectionIds = assignment.sections?.map(s => s.sectionId) || [];
+            
+            if (sectionIds.length === 0) {
+                if (!grouped['unassigned']) grouped['unassigned'] = [];
+                grouped['unassigned'].push(assignment);
+            } else {
+                sectionIds.forEach(sId => {
+                    if (!grouped[sId]) grouped[sId] = [];
+                    grouped[sId].push(assignment);
+                });
+            }
+        });
+        
+        return grouped;
+    }, [assignments]);
+
+    const toggleSection = (sectionId) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionId]: !prev[sectionId]
+        }));
+    };
+
+    const handleAssignmentClick = (assignment) => {
+        setSelectedAssignmentId(assignment.id);
+        setTitle(assignment.title ?? '');
+    };
+
     return (<>
         <div style={{
             maxWidth: '600px',
@@ -28,40 +73,170 @@ const AdminAssignmentMenu = ({
         }}>
             <h3 style={{ textAlign: 'center', marginTop: 0 }}>Select or Create Assignment</h3>
 
-            {/* DROP DOWN MENU FOR ASSIGNMENTS */}
+            {/* CREATE NEW ASSIGNMENT BUTTON */}
+            <button
+                onClick={() => setSelectedAssignmentId(-2)}
+                style={{
+                    width: '100%',
+                    padding: '12px',
+                    marginBottom: '20px',
+                    backgroundColor: '#b1f3b3ff',
+                    color: 'black',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                }}
+            >
+                ➕ Create New Assignment
+            </button>
+
+            {/* SECTIONS WITH COLLAPSIBLE ASSIGNMENTS */}
             <div style={{ marginBottom: '15px' }}>
                 <label style={{
                     display: 'block',
-                    marginBottom: '5px',
+                    marginBottom: '10px',
                     fontWeight: 'bold'
                 }}>
-                    Assignment:
+                    Assignments by Section:
                 </label>
-                <select
-                    value={selectedAssignmentId} //value that gets passed is not the text but assignment id
-                    onChange={e => {
-                        //if there is no target value because nothing has been selected, return -1
-                        const val = Number(e.target.value);
-                        setSelectedAssignmentId(val || -1);
-                        //setTitle to the assignment list selection
-                        if (e.target.value !== "-2") setTitle(assignments.find((a) => a.id === val)?.title ?? '');
-                    }}
-                    style={{
-                        width: '100%',
-                        padding: '8px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                        fontSize: '14px'
-                    }}
-                >
-                    <option value="-1">Select an Assignment</option>
-                    <option value="-2">➕ Create New Assignment</option>
-                    {assignments.map(ass => (
-                        <option key={ass.id} value={ass.id}>
-                            {ass.title}
-                        </option>
-                    ))}
-                </select>
+
+                {sections?.map((section, idx) => {
+                    const sectionAssignments = assignmentsBySection[section.id] || [];
+                    if (sectionAssignments.length === 0) return null;
+                    
+                    const bgColor = sectionColors[idx % sectionColors.length];
+                    const isExpanded = expandedSections[section.id];
+                    
+                    return (
+                        <div key={section.id} style={{ marginBottom: '8px' }}>
+                            {/* Section Header - Clickable */}
+                            <div
+                                onClick={() => toggleSection(section.id)}
+                                style={{
+                                    backgroundColor: bgColor,
+                                    padding: '12px 16px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    transition: 'all 0.2s',
+                                    border: '2px solid transparent'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                                <span>{section.name} ({sectionAssignments.length})</span>
+                                <span style={{ fontSize: '18px' }}>
+                                    {isExpanded ? '▼' : '▶'}
+                                </span>
+                            </div>
+
+                            {/* Assignment List - Expandable */}
+                            {isExpanded && (
+                                <div style={{
+                                    marginTop: '4px',
+                                    marginLeft: '16px',
+                                    border: `2px solid ${bgColor}`,
+                                    borderRadius: '4px',
+                                    overflow: 'hidden'
+                                }}>
+                                    {sectionAssignments.map((ass, assIdx) => {
+                                        const isSelected = selectedAssignmentId === ass.id;
+                                        
+                                        return (
+                                            <div
+                                                key={ass.id}
+                                                onClick={() => handleAssignmentClick(ass)}
+                                                style={{
+                                                    padding: '10px 16px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: isSelected ? '#fff' : 'transparent',
+                                                    borderLeft: isSelected ? '4px solid #2196F3' : '4px solid transparent',
+                                                    borderBottom: assIdx < sectionAssignments.length - 1 ? '1px solid #e0e0e0' : 'none',
+                                                    fontWeight: isSelected ? 'bold' : 'normal',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                                }}
+                                            >
+                                                {ass.title}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* Unassigned assignments */}
+                {assignmentsBySection['unassigned']?.length > 0 && (
+                    <div style={{ marginBottom: '8px', marginTop: '16px' }}>
+                        <div
+                            onClick={() => toggleSection('unassigned')}
+                            style={{
+                                backgroundColor: '#ffebee',
+                                padding: '12px 16px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}
+                        >
+                            <span>⚠️ Unassigned ({assignmentsBySection['unassigned'].length})</span>
+                            <span style={{ fontSize: '18px' }}>
+                                {expandedSections['unassigned'] ? '▼' : '▶'}
+                            </span>
+                        </div>
+
+                        {expandedSections['unassigned'] && (
+                            <div style={{
+                                marginTop: '4px',
+                                marginLeft: '16px',
+                                border: '2px solid #ffebee',
+                                borderRadius: '4px',
+                                overflow: 'hidden'
+                            }}>
+                                {assignmentsBySection['unassigned'].map((ass, assIdx) => {
+                                    const isSelected = selectedAssignmentId === ass.id;
+                                    return (
+                                        <div
+                                            key={ass.id}
+                                            onClick={() => handleAssignmentClick(ass)}
+                                            style={{
+                                                padding: '10px 16px',
+                                                cursor: 'pointer',
+                                                backgroundColor: isSelected ? '#fff' : 'transparent',
+                                                borderLeft: isSelected ? '4px solid #2196F3' : '4px solid transparent',
+                                                borderBottom: assIdx < assignmentsBySection['unassigned'].length - 1 ? '1px solid #e0e0e0' : 'none',
+                                                fontWeight: isSelected ? 'bold' : 'normal',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}
+                                        >
+                                            {ass.title}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {showCreateAssignment && <CreateAssignment
